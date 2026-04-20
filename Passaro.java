@@ -9,8 +9,80 @@ import java.util.List;
 public class Passaro {
     Image[] frames;
     int frameAtual = 0;
-    Color[] cores = { Color.BLUE, Color.RED, Color.GREEN, Color.YELLOW, Color.PINK, Color.BLACK, Color.WHITE };
-    String[] tipos = { "papel", "plastico", "vidro", "metal", "organico", "Madeira", "hospitalar" };
+    String[] tipos = { "papel", "plastico", "vidro", "metal", "organico", "hospitalar" };
+    Color[] cores = { Color.BLUE, Color.RED, Color.GREEN, Color.YELLOW, Color.BLACK, Color.WHITE };
+
+    public static Image[][] imagensLixo = {
+            // PAPEL (10 imagens)
+            {
+                    new ImageIcon("Image/papel/cadernopapel.png").getImage(),
+                    new ImageIcon("Image/papel/caixapapel.png").getImage(),
+                    new ImageIcon("Image/papel/caixapapel2.png").getImage(),
+                    new ImageIcon("Image/papel/envelopepapel.png").getImage(),
+                    new ImageIcon("Image/papel/folhapapel1.png").getImage(),
+                    new ImageIcon("Image/papel/folhapapel2.png").getImage(),
+                    new ImageIcon("Image/papel/jornalpapel.png").getImage(),
+                    new ImageIcon("Image/papel/revistapapel.png").getImage(),
+                    new ImageIcon("Image/papel/rolopapel.png").getImage(),
+            },
+
+            // PLÁSTICO
+            {
+                    new ImageIcon("Image/plastico/canudoplastico.png").getImage(),
+                    new ImageIcon("Image/plastico/copoplastico.png").getImage(),
+                    new ImageIcon("Image/plastico/garraplastico1.png").getImage(),
+                    new ImageIcon("Image/plastico/garraplastico2.png").getImage(),
+                    new ImageIcon("Image/plastico/garraplastico3.png").getImage(),
+                    new ImageIcon("Image/plastico/garraplastico4.png").getImage(),
+                    new ImageIcon("Image/plastico/garraplastico5.png").getImage(),
+                    new ImageIcon("Image/plastico/poteplastico.png").getImage(),
+                    new ImageIcon("Image/plastico/pratoplastico.png").getImage(),
+                    new ImageIcon("Image/plastico/sacoplastico.png").getImage()
+            },
+            {
+                    new ImageIcon("Image/Vidro/copovidro.png").getImage(),
+                    new ImageIcon("Image/Vidro/frascovidro1.png").getImage(),
+                    new ImageIcon("Image/Vidro/frascovidro2.png").getImage(),
+                    new ImageIcon("Image/Vidro/frascovidro3.png").getImage(),
+                    new ImageIcon("Image/Vidro/garrafavidro2.png").getImage(),
+                    new ImageIcon("Image/Vidro/garrafavidro3.png").getImage(),
+                    new ImageIcon("Image/Vidro/garrafavidro4.png").getImage(),
+                    new ImageIcon("Image/Vidro/garrafavirdro1.png").getImage(),
+                    new ImageIcon("Image/Vidro/taçavidro.png").getImage(),
+                    new ImageIcon("Image/Vidro/vasilhavidro1.png").getImage(),
+                    new ImageIcon("Image/Vidro/vasilhavidro2.png").getImage()
+
+            },
+
+            {
+                    new ImageIcon("Image/Metal/aramemetal.png").getImage(),
+                    new ImageIcon("Image/Metal/clipemetal.png").getImage(),
+                    new ImageIcon("Image/Metal/facametal.png").getImage(),
+                    new ImageIcon("Image/Metal/garfometal.png").getImage(),
+                    new ImageIcon("Image/Metal/latametal.png").getImage(),
+                    new ImageIcon("Image/Metal/latametal2.png").getImage(),
+                    new ImageIcon("Image/Metal/latametal3.png").getImage(),
+                    new ImageIcon("Image/Metal/latametal4.png").getImage(),
+                    new ImageIcon("Image/Metal/pregometal.png").getImage(),
+                    new ImageIcon("Image/Metal/pregometal.png").getImage()
+            },
+            {
+                    new ImageIcon("Image/Organico/cascaorg1.png").getImage(),
+                    new ImageIcon("Image/Organico/cascaorg2.png").getImage(),
+                    new ImageIcon("Image/Organico/cascaorg3.png").getImage(),
+                    new ImageIcon("Image/Organico/cascaorg4.png").getImage(),
+                    new ImageIcon("Image/Organico/org5.png").getImage(),
+            },
+            {
+                    new ImageIcon("Image/Hospitalar/atadurahosp.png").getImage(),
+                    new ImageIcon("Image/Hospitalar/curativohosp.png").getImage(),
+                    new ImageIcon("Image/Hospitalar/gazehosp.png").getImage(),
+                    new ImageIcon("Image/Hospitalar/luvashosp.png").getImage(),
+                    new ImageIcon("Image/Hospitalar/mascarahosp.png").getImage(),
+                    new ImageIcon("Image/Hospitalar/seringahosp.png").getImage(),
+            },
+    };
+
     int pontoSoltar;
     int x, y;
     int velocidade;
@@ -24,7 +96,6 @@ public class Passaro {
         this.lixos = lixos;
         velocidade = 2 + (int) (Math.random() * 3);
 
-        // frames
         frames = new Image[12];
         int index = 0;
         for (int linha = 0; linha < 3; linha++) {
@@ -33,49 +104,46 @@ public class Passaro {
                         "Image/corvo/frame_" + linha + "_" + col + ".png").getImage();
             }
         }
+        int tipoIndex = (int) (Math.random() * tipos.length);
+        Image[] imagensDoTipo = imagensLixo[tipoIndex];
+        Image imagemEscolhida = imagensDoTipo[(int) (Math.random() * imagensDoTipo.length)];
 
-        // 🔥 cria lixo que ele vai carregar
-        int i = (int) (Math.random() * tipos.length);
         lixoCarregado = new Lixo(
-                tipos[i],
+                tipos[tipoIndex],
                 x,
                 y,
-                cores[i]);
-
-        // 🔥 define ponto aleatório da tela
+                imagemEscolhida);
         pontoSoltar = 100 + (int) (Math.random() * 800);
     }
 
     void atualizar() {
         x += velocidade;
 
-        // animação
         frameAtual = (frameAtual + 1) % frames.length;
 
-        // flutuação
         y += Math.sin(x * 0.05) * 2;
 
-        // 🔥 SOLTAR LIXO no meio da tela
         if (!soltou && x > pontoSoltar) {
             lixoCarregado.x = x + 30;
             lixoCarregado.y = y + 40;
-            lixos.add(lixoCarregado); // adiciona no jogo
+            lixos.add(lixoCarregado);
             soltou = true;
         }
     }
 
     void desenhar(Graphics g) {
-        // pássaro
+
         g.drawImage(
                 frames[frameAtual],
                 x + 80, y,
                 -80, 80,
                 null);
 
-        // 🔥 desenha lixo enquanto está carregando
         if (!soltou) {
-            g.setColor(lixoCarregado.cor);
-            g.fillRect(x + 30, y + 40, 20, 20);
+            g.drawImage(lixoCarregado.imagem, x + 30, y + 40, 60, 60, null);
+
+            // g.setColor(lixoCarregado.cor);
+            // g.fillRect(x + 30, y + 40, 20, 20);
         }
     }
 }

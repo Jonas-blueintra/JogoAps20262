@@ -6,6 +6,7 @@ import java.util.List;
 import javax.swing.ImageIcon;
 
 public class PassaroBonus {
+
     Image[] frames;
     int frameAtual = 0;
     int x, y;
@@ -13,24 +14,32 @@ public class PassaroBonus {
     int pontoSoltar;
     boolean soltou = false;
 
-    ItemBonus item;
-    List<ItemBonus> bonus;
+    Lixo lixoEspecial;
+    List<Lixo> lixos;
 
-    PassaroBonus(int x, int y, List<ItemBonus> bonus) {
+    public static Image[] imagensBonus = {
+            new ImageIcon("Image/Bonus/bonus1.png").getImage(),
+            new ImageIcon("Image/Bonus/bonus2.png").getImage()
+    };
+
+    PassaroBonus(int x, int y, List<Lixo> lixos) {
         this.x = x;
         this.y = y;
-        this.bonus = bonus;
+        this.lixos = lixos;
 
         velocidade = 3 + (int) (Math.random() * 3);
 
-        // 🔥 carregar frames (1 até 19)
         frames = new Image[19];
         for (int i = 0; i < 19; i++) {
             frames[i] = new ImageIcon(
                     "Image/bem/spr_ababil_walk (" + (i + 1) + ").png").getImage();
         }
 
-        item = new ItemBonus(x, y);
+        // 🔥 escolhe imagem aleatória
+        Image img = imagensBonus[(int) (Math.random() * imagensBonus.length)];
+
+        // 🔥 cria lixo especial
+        lixoEspecial = new Lixo("especial", x, y, img);
 
         pontoSoltar = 100 + (int) (Math.random() * 800);
     }
@@ -40,9 +49,10 @@ public class PassaroBonus {
         frameAtual = (frameAtual + 1) % frames.length;
 
         if (!soltou && x > pontoSoltar) {
-            item.x = x;
-            item.y = y;
-            bonus.add(item);
+            lixoEspecial.x = x + 30;
+            lixoEspecial.y = y + 40;
+
+            lixos.add(lixoEspecial);
             soltou = true;
         }
     }
@@ -51,8 +61,7 @@ public class PassaroBonus {
         g.drawImage(frames[frameAtual], x, y, 80, 80, null);
 
         if (!soltou) {
-            g.setColor(Color.WHITE);
-            g.fillOval(x + 30, y + 40, 15, 15);
+            g.drawImage(lixoEspecial.imagem, x + 30, y + 40, 30, 30, null);
         }
     }
 }

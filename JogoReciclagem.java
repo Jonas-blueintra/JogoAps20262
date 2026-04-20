@@ -9,44 +9,94 @@ import java.util.List;
 public class JogoReciclagem extends JPanel implements ActionListener, MouseListener, MouseMotionListener {
 
     Image background;
-    String[] tipos = { "papel", "plastico", "vidro", "metal", "organico", "Madeira", "hospitalar" };
+    String[] tipos = { "papel", "plastico", "vidro", "Especial", "metal", "organico", "hospitalar" };
     Color[] cores = { Color.BLUE, Color.RED, Color.GREEN, Color.YELLOW, Color.PINK, Color.BLACK, Color.WHITE };
     Image[] imagensLixeira = {
             new ImageIcon("Image/lixeira-papel.png").getImage(),
             new ImageIcon("Image/lixeira-plastico.png").getImage(),
             new ImageIcon("Image/lixeira-vidro.png").getImage(),
+            new ImageIcon("Image/cesta.png").getImage(),
             new ImageIcon("Image/lixeira-metal.png").getImage(),
             new ImageIcon("Image/lixeira-organica.png").getImage(),
-            new ImageIcon("Image/lixeira-madeira.png").getImage(),
             new ImageIcon("Image/lixeira-ambulantorias.png").getImage() };
+
+    Image[] imagensLixeiradetalhes = {
+            new ImageIcon("Image/lixeira-papel.png").getImage(),
+            new ImageIcon("Image/lixeira-plastico.png").getImage(),
+            new ImageIcon("Image/lixeira-vidro.png").getImage(),
+            // new ImageIcon("Image/cesta.png").getImage(),
+            new ImageIcon("Image/lixeira-metal.png").getImage(),
+            new ImageIcon("Image/lixeira-organica.png").getImage(),
+            new ImageIcon("Image/lixeira-ambulantorias.png").getImage() };
+
+    Image[] cestaImage = {
+            new ImageIcon("Image/cesta.png").getImage(),
+    };
 
     List<Passaro> passaros = new ArrayList<>();
     List<Lixo> lixos = new ArrayList<>();
     List<Lixeira> lixeiras = new ArrayList<>();
     List<ItemBonus> bonus = new ArrayList<>();
     List<PassaroBonus> passarosBonus = new ArrayList<>();
+    List<Confete> confetes = new ArrayList<>();
+    List<Nuvem> nuvens = new ArrayList<>();
+    Image imagemNuvem = new ImageIcon("Image/Nuvem.png").getImage();
     int pontos = 0;
-    int vidas = 55;
+    int vidas = 5;
     int tempoSpawn = 0;
     int tempoMensagem = 0;
-    int tempoJogo = 60;
+    double tempoJogo = 0;
+    int tempoMax = 0;
     int frames = 0;
-    boolean jogoIniciado = false;
-    boolean gameOver = false;
-    boolean venceu = false;
     Lixo lixoSelecionado = null;
     String mensagem = "";
-    int feedback = 0; // 0 = nada, 1 = acerto, -1 = erro
+    int feedback = 0;
     int tempoFeedback = 0;
     ItemBonus bonusSelecionado = null;
-    int feedbackCesta = 0; // 1 = acerto
+    int feedbackCesta = 0;
     int tempoFeedbackCesta = 0;
-    // int alturaTela = getHeight();
+    String dificuldade = "MÉDIO";
+    int tempoSelecionado = 60;
+    Point mousePos = new Point(0, 0);
+    Image coracaoCheio = new ImageIcon("Image/coracao.png").getImage();
+    Image coracaoVazio = new ImageIcon("Image/coracao_vazio.png").getImage();
+    Image imgIma = new ImageIcon("Image/ima.png").getImage();
+    int hudW = 210;
+    int hudH = 110;
+    boolean imaAtivo = false;
+    int tempoIma = 0;
+    int usosIma = 0;
+
+    enum EstadoJogo {
+        MENU, JOGANDO, FIM, DETALHES
+    }
+
+    EstadoJogo estado = EstadoJogo.MENU;
+
+    Lixeira encontrarLixeira(String tipo) {
+        for (Lixeira l : lixeiras) {
+            if (l.tipo.equalsIgnoreCase(tipo)) {
+                return l;
+            }
+        }
+        return null;
+    }
 
     public JogoReciclagem() {
 
-        background = new ImageIcon("Image/fundo.jpeg").getImage();
+        Image img = new ImageIcon("Image/mao-mostrando-o-contorno-da-palma.png").getImage();
+        Image cursorImg = img.getScaledInstance(32, 32, Image.SCALE_SMOOTH);
 
+        setCursor(Toolkit.getDefaultToolkit().createCustomCursor(
+                cursorImg,
+                new Point(0, 0),
+                "cursor"));
+        // cria 4 nuvens no meio
+        background = new ImageIcon("Image/fundo.jpeg").getImage();
+        nuvens.add(new Nuvem(400, 250, 1, imagemNuvem));
+        nuvens.add(new Nuvem(700, 150, 2, imagemNuvem));
+        nuvens.add(new Nuvem(1000, 90, 1, imagemNuvem));
+        nuvens.add(new Nuvem(1300, 20, 2, imagemNuvem));
         for (int i = 0; i < tipos.length; i++) {
             lixeiras.add(new Lixeira(tipos[i], 0, imagensLixeira[i], 0, 0));
         }
@@ -58,22 +108,67 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
     }
 
     public void actionPerformed(ActionEvent e) {
+        if (imaAtivo) {
 
-        if (!jogoIniciado || gameOver || venceu) {
+            tempoIma--;
+
+            for (Lixo lixo : lixos) {
+
+                if (usosIma <= 0)
+                    break;
+
+                Lixeira destino = encontrarLixeira(lixo.tipo);
+
+                if (destino != null) {
+
+                    int alvoX = destino.x + 80;
+                    int alvoY = getHeight() - 120;
+
+                    // distância até o alvo
+                    int diffX = alvoX - lixo.x;
+                    int diffY = alvoY - lixo.y;
+
+                    // 🎯 PASSO 1: alinhar no X primeiro
+                    if (Math.abs(diffX) > 5) {
+                        lixo.x += diffX * 0.2;
+                    } else {
+                        // 🎯 PASSO 2: depois desce reto
+                        lixo.y += diffY * 0.2;
+                    }
+                    // chegou perto = coleta automática
+                    if (Math.abs(lixo.x - alvoX) < 10 && Math.abs(lixo.y - alvoY) < 10) {
+
+                        pontos++;
+                        usosIma--;
+
+                        lixos.remove(lixo);
+                        break;
+                    }
+                }
+            }
+
+            if (tempoIma <= 0 || usosIma <= 0) {
+                imaAtivo = false;
+            }
+        }
+        // SEMPRE atualizar nuvens (menu incluso)
+        for (Nuvem n : nuvens) {
+            n.atualizar(getWidth());
+        }
+
+        if (estado != EstadoJogo.JOGANDO) {
             repaint();
             return;
         }
-        int alturaTela = getHeight();
         tempoSpawn++;
         frames++;
 
-        // ⏱️ contador regressivo
         if (frames >= 30) {
             tempoJogo--;
             frames = 0;
 
             if (tempoJogo <= 0) {
-                venceu = true;
+                estado = EstadoJogo.FIM;
             }
         }
 
@@ -88,6 +183,10 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
                 feedbackCesta = 0;
             }
         }
+        // for (Nuvem n : nuvens) {
+        // n.atualizar(getWidth());
+        // }
+
         for (Lixeira lixeira : lixeiras) {
             if (lixeira.tempoFeedback > 0) {
                 lixeira.tempoFeedback--;
@@ -96,11 +195,19 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
                 }
             }
         }
-        if (Math.random() < 0.03) {
+        double chance = 0.02;
+        double quantidade = 10;
+        if (dificuldade.equals("FÁCIL"))
+            chance = 0.01;
+        quantidade = 5;
+        if (dificuldade.equals("DIFÍCIL"))
+            chance = 0.05;
+        quantidade = 15;
+        if (passaros.size() < quantidade && Math.random() < chance) {
             passaros.add(new Passaro(-100, 50 + (int) (Math.random() * 200), lixos));
         }
-        if (Math.random() < 0.01) {
-            passarosBonus.add(new PassaroBonus(-100, 100, bonus));
+        if (passarosBonus.size() < 1 && Math.random() < 0.01) {
+            passarosBonus.add(new PassaroBonus(-100, 100, lixos));
         }
         for (Passaro p : passaros) {
             p.atualizar();
@@ -108,33 +215,16 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
         for (PassaroBonus p : passarosBonus) {
             p.atualizar();
         }
-        java.util.Iterator<ItemBonus> itBonus = bonus.iterator();
+        java.util.Iterator<Confete> itConfete = confetes.iterator();
 
-        while (itBonus.hasNext()) {
-            ItemBonus b = itBonus.next();
+        while (itConfete.hasNext()) {
+            Confete c = itConfete.next();
+            c.atualizar();
 
-            b.y += 3;
-
-            Rectangle r = new Rectangle(b.x, b.y, 20, 20);
-            Rectangle cesta = new Rectangle(getWidth() / 2 - 100, getHeight() - 350, 200, 50);
-
-            if (r.intersects(cesta)) {
-                pontos += 2;
-                vidas++;
-
-                mensagem = "BONUS +2 pontos +1 vida!";
-                tempoMensagem = 60;
-
-                feedbackCesta = 1;
-                tempoFeedbackCesta = 30;
-                itBonus.remove();
-            }
-
-            if (b.y > getHeight()) {
-                itBonus.remove();
+            if (c.morreu()) {
+                itConfete.remove();
             }
         }
-        // remover quando sair da tela
         passaros.removeIf(p -> p.x > getWidth() + 100);
         java.util.Iterator<Lixo> it = lixos.iterator();
 
@@ -158,13 +248,18 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
                 it.remove();
 
                 if (vidas <= 0)
-                    gameOver = true;
+                    estado = EstadoJogo.FIM;
             }
         }
         repaint();
     }
 
     boolean verificarColisao(Lixo lixo) {
+
+        // 🔥 BLOQUEIO TOTAL
+        if (lixo.sendoPuxado) {
+            return false;
+        }
 
         Rectangle lixoRect = new Rectangle(lixo.x, lixo.y, 30, 30);
 
@@ -177,7 +272,39 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
                     yLixeira,
                     190,
                     190);
+            // 🔥 TRATAR LIXO ESPECIAL (CESTA)
+            if (lixo.tipo.equalsIgnoreCase("especial")) {
 
+                Rectangle cesta = new Rectangle(
+                        getWidth() / 2 - 100,
+                        getHeight() - 100,
+                        200,
+                        50);
+
+                if (lixoRect.intersects(cesta)) {
+                    int cestaX = getWidth() / 2;
+                    int cestaY = getHeight() - 100;
+
+                    for (int i = 0; i < 300; i++) {
+                        confetes.add(new Confete(cestaX, cestaY));
+                    }
+                    pontos += 2;
+                    vidas++;
+                    imaAtivo = true;
+                    tempoIma = 300; // dura ~10 segundos
+                    usosIma = 5; // vai puxar 5 lixos
+                    mensagem = "BONUS +2 pontos +1 vida!";
+                    tempoMensagem = 60;
+
+                    feedbackCesta = 1;
+                    tempoFeedbackCesta = 30;
+                    if (vidas > 5)
+                        hudW += 30;
+                    return true;
+                }
+
+                return false; // não testa nas lixeiras
+            }
             if (lixoRect.intersects(lixeiraRect)) {
 
                 if (lixo.tipo.equals(lixeira.tipo)) {
@@ -193,7 +320,7 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
                     lixeira.tempoFeedback = 30;
 
                     if (vidas <= 0)
-                        gameOver = true;
+                        estado = EstadoJogo.FIM;
                 }
 
                 tempoMensagem = 60;
@@ -204,16 +331,309 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
         return false;
     }
 
+    void desenharBotao(Graphics2D g2, String texto, Rectangle r, boolean hover) {
+
+        // fundo com gradiente
+        GradientPaint grad = new GradientPaint(
+                r.x, r.y,
+                hover ? new Color(100, 255, 150) : new Color(0, 200, 100), // topo
+                r.x, r.y + r.height,
+                hover ? new Color(0, 180, 80) : new Color(0, 120, 60) // base
+        );
+        g2.setPaint(grad);
+        g2.fillRoundRect(r.x, r.y, r.width, r.height, 20, 20);
+
+        // borda
+        g2.setColor(Color.WHITE);
+        g2.drawRoundRect(r.x, r.y, r.width, r.height, 20, 20);
+
+        // texto centralizado
+        g2.setFont(new Font("Arial", Font.BOLD, 20));
+        FontMetrics fm = g2.getFontMetrics();
+
+        int textX = r.x + (r.width - fm.stringWidth(texto)) / 2;
+        int textY = r.y + ((r.height - fm.getHeight()) / 2) + fm.getAscent();
+
+        g2.drawString(texto, textX, textY);
+    }
+
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
         int w = getWidth();
         int h = getHeight();
+        g.drawImage(background, 0, 0, w, h, null);
+        // 🔥 AVISO DO IMÃ (sempre por cima de tudo)
+        if (imaAtivo) {
 
-        if (background != null) {
-            g.drawImage(background, 0, 0, w, h, this);
+            Graphics2D g2d = (Graphics2D) g;
+
+            int tamanho = 40 + (int) (Math.sin(System.currentTimeMillis() * 0.01) * 3);
+
+            int x = getWidth() / 2 - tamanho / 2;
+            int y = 20;
+
+            String texto = "IMÃ ATIVO";
+
+            g2d.setFont(new Font("Arial", Font.BOLD, 16));
+            FontMetrics fm = g2d.getFontMetrics();
+
+            int larguraTexto = fm.stringWidth(texto);
+
+            int boxW = tamanho + 10 + larguraTexto + 20;
+            int boxH = tamanho + 20;
+
+            int boxX = getWidth() / 2 - boxW / 2;
+            int boxY = y - 10;
+
+            // fundo
+            g2d.setColor(new Color(0, 0, 0, 150));
+            g2d.fillRoundRect(boxX, boxY, boxW, boxH, 20, 20);
+
+            // borda
+            g2d.setColor(Color.CYAN);
+            g2d.drawRoundRect(boxX, boxY, boxW, boxH, 20, 20);
+
+            // imagem (com sombra leve)
+            int imgX = boxX + 10;
+            int imgY = y;
+
+            g2d.drawImage(imgIma, imgX + 2, imgY + 2, tamanho, tamanho, null);
+            g2d.drawImage(imgIma, imgX, imgY, tamanho, tamanho, null);
+
+            // texto alinhado verticalmente com a imagem
+
+            int textX = imgX + tamanho + 10;
+            int textY = imgY + (tamanho / 2) + (fm.getAscent() / 2) - 2;
+
+            // sombra texto
+            g2d.setColor(Color.BLACK);
+            g2d.drawString(texto, textX + 2, textY + 2);
+
+            // texto principal
+            g2d.setColor(Color.CYAN);
+            g2d.drawString(texto, textX, textY);
+        }
+        for (Nuvem n : nuvens) {
+            n.desenhar(g);
         }
 
+        // desenha nuvens
+        // for (Nuvem n : nuvens) {
+        // n.desenhar(g);
+        // }
+        if (estado == EstadoJogo.MENU) {
+            Graphics2D g2 = (Graphics2D) g;
+
+            // suaviza tudo (anti-alias)
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            // overlay escuro (tipo CSS rgba)
+            g2.setColor(new Color(0, 0, 0, 120));
+            g2.fillRect(0, 0, w, h);
+            g2.setFont(new Font("Arial", Font.BOLD, 60));
+
+            // sombra
+            g2.setColor(Color.BLACK);
+            g2.drawString("JOGO RECICLAGEM", w / 2 - 248, 152);
+
+            // texto principal
+            g2.setColor(Color.WHITE);
+            g2.drawString("JOGO RECICLAGEM", w / 2 - 250, 150);
+
+            Rectangle btnPlay = new Rectangle(w / 2 - 120, 220, 240, 50);
+            Rectangle btnDetalhes = new Rectangle(w / 2 - 120, 290, 240, 50);
+            Rectangle btnTempo = new Rectangle(w / 2 - 120, 360, 240, 50);
+            Rectangle btnDificuldade = new Rectangle(w / 2 - 150, 430, 300, 50);
+
+            // desenhar botões com hover
+            desenharBotao(g2, "PLAY", btnPlay, btnPlay.contains(mousePos));
+            desenharBotao(g2, "DETALHES", btnDetalhes, btnDetalhes.contains(mousePos));
+            desenharBotao(g2, "TEMPO: " + tempoSelecionado + "s", btnTempo, btnTempo.contains(mousePos));
+            desenharBotao(g2, "DIFICULDADE: " + dificuldade, btnDificuldade, btnDificuldade.contains(mousePos));
+
+            return;
+        }
+        if (estado == EstadoJogo.DETALHES) {
+
+            g.setColor(new Color(0, 0, 0, 150));
+            g.fillRect(0, 0, w, h);
+
+            Graphics2D g2 = (Graphics2D) g;
+
+            // fonte grande
+            Font tituloFont = new Font("Arial", Font.BOLD, h / 18);
+            g2.setFont(tituloFont);
+
+            FontMetrics fm = g2.getFontMetrics();
+            String titulo = "TIPOS DE LIXO";
+
+            // centralizar de verdade (não no olho 👀)
+            int xTitulo = (w - fm.stringWidth(titulo)) / 2;
+            int yTitulo = h / 12;
+
+            // sombra
+            g2.setColor(new Color(0, 0, 0, 180));
+            g2.drawString(titulo, xTitulo + 3, yTitulo + 3);
+
+            // gradiente no texto
+            GradientPaint gradTitulo = new GradientPaint(
+                    xTitulo, yTitulo,
+                    new Color(0, 255, 150),
+                    xTitulo, yTitulo + 40,
+                    new Color(0, 150, 80));
+            g2.setPaint(gradTitulo);
+            g2.drawString(titulo, xTitulo, yTitulo);
+
+            int y = 90;
+
+            for (int i = 0; i < imagensLixeiradetalhes.length; i++) {
+
+                // 🗑️ LIXEIRA
+                g.drawImage(imagensLixeiradetalhes[i], 100, y, 100, 100, null);
+
+                // 🏷️ NOME
+                g.setFont(new Font("Arial", Font.CENTER_BASELINE, 40));
+                g.setColor(Color.WHITE);
+                g.drawString(tipos[i], 220, y + 50);
+
+                // 🧩 ITENS DO LIXO (lado direito)
+                int startX = 400;
+                int size = 70;
+                int espacamento = 10;
+
+                if (i < Passaro.imagensLixo.length) {
+
+                    // largura disponível na tela
+                    int larguraDisponivel = w - startX - 50;
+
+                    // quantas imagens cabem por linha
+                    int colunas = larguraDisponivel / (size + espacamento);
+
+                    for (int j = 0; j < Passaro.imagensLixo[i].length; j++) {
+
+                        int col = j % colunas;
+                        int row = j / colunas;
+
+                        int xItem = startX + col * (size + espacamento);
+                        int yItem = y + row * (size + 10);
+
+                        g.drawImage(Passaro.imagensLixo[i][j], xItem, yItem, size, size, null);
+                    }
+                }
+                int larguraDisponivel = w - startX - 50;
+
+                int colunas = larguraDisponivel / (size + espacamento);
+
+                int linhas = (int) Math.ceil((double) Passaro.imagensLixo[i].length / colunas);
+                y += Math.max(100, linhas * (size + 10) + 20);
+            }
+            g.drawImage(cestaImage[0], 100, y, 100, 100, null);
+            g.setFont(new Font("Arial", Font.CENTER_BASELINE, 40));
+            g.setColor(Color.WHITE);
+            g.drawString("Especial", 220, y + 50);
+
+            int startX = 400;
+            int size = 80;
+            int espacamento = 10;
+
+            if (PassaroBonus.imagensBonus != null) {
+
+                // largura disponível na tela
+                int larguraDisponivel = w - startX - 50;
+
+                // quantas imagens cabem por linha
+                int colunas = larguraDisponivel / (size + espacamento);
+
+                for (int j = 0; j < PassaroBonus.imagensBonus.length; j++) {
+
+                    int col = j % colunas;
+                    int row = j / colunas;
+
+                    int xItem = startX + col * (size + espacamento);
+                    int yItem = y + row * (size + 10);
+
+                    g.drawImage(PassaroBonus.imagensBonus[j], xItem, yItem, size, size, null);
+                }
+            }
+
+            Rectangle btnVoltar = new Rectangle(w / 2 - 150, h - 80, 300, 50);
+
+            // reaproveita seu método!
+            desenharBotao(g2, "VOLTAR", btnVoltar, btnVoltar.contains(mousePos));
+
+            return;
+        }
+        if (estado == EstadoJogo.FIM) {
+
+            Graphics2D g2 = (Graphics2D) g;
+
+            // suavização
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            // 🔳 overlay escuro (fundo)
+            g2.setColor(new Color(0, 0, 0, 180));
+            g2.fillRect(0, 0, w, h);
+
+            // 📦 painel central
+            int boxW = 500;
+            int boxH = 300;
+            int boxX = (w - boxW) / 2;
+            int boxY = (h - boxH) / 2;
+
+            // fundo do painel
+            g2.setColor(new Color(20, 20, 20, 220));
+            g2.fillRoundRect(boxX, boxY, boxW, boxH, 30, 30);
+
+            // borda estilo neon
+            GradientPaint borda = new GradientPaint(
+                    boxX, boxY,
+                    new Color(0, 255, 150),
+                    boxX + boxW, boxY + boxH,
+                    new Color(0, 150, 80));
+            g2.setPaint(borda);
+            g2.setStroke(new BasicStroke(3));
+            g2.drawRoundRect(boxX, boxY, boxW, boxH, 30, 30);
+
+            // 🎯 TÍTULO
+            String titulo = "FIM DE JOGO";
+            Font fontTitulo = new Font("Arial", Font.BOLD, 48);
+            g2.setFont(fontTitulo);
+
+            FontMetrics fmTitulo = g2.getFontMetrics();
+            int xTitulo = boxX + (boxW - fmTitulo.stringWidth(titulo)) / 2;
+            int yTitulo = boxY + 70;
+
+            // sombra
+            g2.setColor(Color.BLACK);
+            g2.drawString(titulo, xTitulo + 3, yTitulo + 3);
+
+            // cor principal
+            g2.setColor(new Color(0, 255, 150));
+            g2.drawString(titulo, xTitulo, yTitulo);
+
+            // ⭐ PONTOS
+            String textoPontos = "PONTOS: " + pontos;
+            Font fontPontos = new Font("Arial", Font.BOLD, 28);
+            g2.setFont(fontPontos);
+
+            FontMetrics fmPontos = g2.getFontMetrics();
+            int xPontos = boxX + (boxW - fmPontos.stringWidth(textoPontos)) / 2;
+            int yPontos = boxY + 140;
+
+            g2.setColor(Color.BLACK);
+            g2.drawString(textoPontos, xPontos + 2, yPontos + 2);
+
+            g2.setColor(Color.WHITE);
+            g2.drawString(textoPontos, xPontos, yPontos);
+
+            // 🔘 BOTÃO VOLTAR
+            Rectangle btnVoltar = new Rectangle(boxX + 100, boxY + 190, 300, 60);
+
+            desenharBotao(g2, "VOLTAR AO MENU", btnVoltar, btnVoltar.contains(mousePos));
+
+            return;
+        }
         for (Passaro p : passaros) {
             p.desenhar(g);
         }
@@ -224,50 +644,21 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
             g.setColor(Color.WHITE);
             g.fillOval(b.x, b.y, 20, 20);
         }
-        if (!jogoIniciado) {
-            g.setFont(new Font("Arial", Font.BOLD, 40));
-            g.drawString("JOGO RECICLAGEM", w / 2 - 200, h / 2 - 50);
-
-            g.setFont(new Font("Arial", Font.PLAIN, 20));
-            g.drawString("Clique para jogar", w / 2 - 100, h / 2);
-            return;
+        for (Confete c : confetes) {
+            c.desenhar(g);
         }
 
-        if (gameOver) {
-            g.setFont(new Font("Arial", Font.BOLD, 40));
-            g.drawString("GAME OVER", w / 2 - 120, h / 2 - 50);
-            g.setFont(new Font("Arial", Font.PLAIN, 20));
-            g.drawString("Clique para reiniciar", w / 2 - 120, h / 2);
-            return;
-        }
-
-        if (venceu) {
-            g.setFont(new Font("Arial", Font.BOLD, 40));
-            g.drawString("VOCÊ VENCEU!", w / 2 - 150, h / 2 - 50);
-
-            g.setFont(new Font("Arial", Font.PLAIN, 20));
-            g.drawString("Pontos: " + pontos, w / 2 - 50, h / 2);
-            g.drawString("Clique para jogar novamente", w / 2 - 150, h / 2 + 40);
-            return;
-        }
         // 3. LIXOS
         for (Lixo lixo : lixos) {
-            g.setColor(lixo.cor);
-            g.fillRect(lixo.x, lixo.y, 30, 30);
+            g.drawImage(lixo.imagem, lixo.x, lixo.y, 60, 60, null);
         }
 
         Image check = new ImageIcon("Image/verifica.png").getImage();
         Image ximg = new ImageIcon("Image/x.png").getImage();
-
         int larguraLixeira = 190;
-        int espacamento = 30; // espaço entre lixeiras
-
+        int espacamento = 30;
         int totalLixeiras = lixeiras.size();
-
-        // largura total ocupada
         int larguraTotal = totalLixeiras * larguraLixeira + (totalLixeiras - 1) * espacamento;
-
-        // ponto inicial pra centralizar
         int startX = (w - larguraTotal) / 2;
 
         for (int i = 0; i < lixeiras.size(); i++) {
@@ -294,53 +685,217 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
             }
         }
         int cestaX = w / 2 - 100;
-        int cestaY = h - 350;
+        int cestaY = h - 100;
 
-        g.setColor(Color.ORANGE);
-        g.fillRect(cestaX, cestaY, 200, 50);
-        g.setColor(Color.BLACK);
-        g.drawString("BONUS", cestaX + 60, cestaY + 30);
-        // 🔥 5. HUD (SEMPRE POR CIMA)
+        if (feedbackCesta == 1) {
+            g.drawImage(check, cestaX + 60, cestaY + 10, 80, 80, null);
+        }
+
+        Graphics2D g2 = (Graphics2D) g;
+
+        // suavização
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // 🔳 FUNDO DO PLACAR
+        int hudX = 10;
+        int hudY = 10;
+
+        g2.setColor(new Color(0, 0, 0, 140)); // transparente
+        g2.fillRoundRect(hudX, hudY, hudW, hudH, 20, 20);
+
+        // borda
+        g2.setColor(new Color(0, 255, 150));
+        g2.setStroke(new BasicStroke(2));
+        g2.drawRoundRect(hudX, hudY, hudW, hudH, 20, 20);
+
+        // 🔤 TEXTO
+        // g2.setFont(new Font("Arial", Font.BOLD, 16));
+
+        // // sombra texto
+        // g2.setColor(Color.BLACK);
+        // g2.drawString("PONTOS: " + pontos, hudX + 12, hudY + 28);
+        // g2.drawString("VIDAS: " + vidas, hudX + 12, hudY + 50);
+        // g2.drawString("TEMPO: " + tempoJogo, hudX + 12, hudY + 72);
+
+        // texto principal
+        g2.setColor(Color.WHITE);
+        g2.drawString("PONTOS: " + pontos, hudX + 10, hudY + 26);
+        int tamanho = 30;
+        int espacamento2 = 5;
+
+        int startX2 = hudX + 10;
+        int startY = hudY + 40;
+
+        // desenha corações
+
+        for (int i = 0; i < vidas; i++) {
+
+            int x = startX2 + i * (tamanho + espacamento2);
+
+            if (i < vidas) {
+                g2.drawImage(coracaoCheio, x, startY, tamanho, tamanho, null);
+            } else {
+                g2.drawImage(coracaoVazio, x, startY, tamanho, tamanho, null);
+            }
+        }
+        int barraLargura = 200;
+        int barraAltura = 20;
+
+        int xBarra = 15;
+        int yBarra = 90;
+
+        // fundo (barra vazia)
+        g.setColor(new Color(0, 0, 0, 150));
+        g.fillRoundRect(xBarra, yBarra, barraLargura, barraAltura, 20, 20);
+
+        // calcula porcentagem
+        double porcentagem = tempoMax > 0 ? (double) tempoJogo / tempoMax : 0;
+
+        int larguraAtual = (int) (barraLargura * porcentagem);
+
+        // cor dinâmica (verde → amarelo → vermelho)
+        if (porcentagem > 0.6) {
+            g.setColor(new Color(0, 200, 0)); // verde
+        } else if (porcentagem > 0.3) {
+            g.setColor(new Color(255, 200, 0)); // amarelo
+        } else {
+            g.setColor(new Color(200, 0, 0)); // vermelho
+        }
+
+        // barra preenchida
+        g.fillRoundRect(xBarra, yBarra, larguraAtual, barraAltura, 20, 20);
+
+        // borda
         g.setColor(Color.WHITE);
-        g.setFont(new Font("Arial", Font.BOLD, 16));
+        g.drawRoundRect(xBarra, yBarra, barraLargura, barraAltura, 20, 20);
 
-        g.drawString("Pontos: " + pontos, 10, 20);
-        g.drawString("Vidas: " + vidas, 10, 40);
-        g.drawString("Tempo: " + tempoJogo, 10, 60);
-        g.drawString(mensagem, w - 200, 20);
+        // texto em cima
+        g.setFont(new Font("Arial", Font.BOLD, 12));
+        g.drawString("Tempo", xBarra + 70, yBarra + 15);
+
+        if (!mensagem.isEmpty()) {
+
+            int msgW = 300;
+            int msgH = 40;
+            int msgX = w - msgW - 20;
+            int msgY = 20;
+
+            // fundo
+            g2.setColor(new Color(0, 0, 0, 140));
+            g2.fillRoundRect(msgX, msgY, msgW, msgH, 15, 15);
+
+            // borda (verde ou vermelho dependendo)
+            if (mensagem.contains("Acertou") || mensagem.contains("BONUS")) {
+                g2.setColor(new Color(0, 255, 100));
+            } else {
+                g2.setColor(new Color(255, 80, 80));
+            }
+
+            g2.setStroke(new BasicStroke(2));
+            g2.drawRoundRect(msgX, msgY, msgW, msgH, 15, 15);
+
+            // texto centralizado
+            g2.setFont(new Font("Arial", Font.BOLD, 16));
+            FontMetrics fm = g2.getFontMetrics();
+
+            int textX = msgX + (msgW - fm.stringWidth(mensagem)) / 2;
+            int textY = msgY + ((msgH - fm.getHeight()) / 2) + fm.getAscent();
+
+            // sombra
+            g2.setColor(Color.BLACK);
+            g2.drawString(mensagem, textX + 2, textY + 2);
+
+            // texto
+            g2.setColor(Color.WHITE);
+            g2.drawString(mensagem, textX, textY);
+        }
 
     }
 
     public void mousePressed(MouseEvent e) {
 
-        if (!jogoIniciado) {
-            jogoIniciado = true;
-            return;
-        }
+        int x = e.getX();
+        int y = e.getY();
 
-        if (gameOver || venceu) {
-            pontos = 0;
-            vidas = 5;
-            tempoJogo = 60;
-            lixos.clear();
-            gameOver = false;
-            venceu = false;
-            return;
-        }
+        // MENU
+        if (estado == EstadoJogo.MENU) {
 
-        for (Lixo lixo : lixos) {
-            if (new Rectangle(lixo.x, lixo.y, 30, 30).contains(e.getPoint())) {
-                lixoSelecionado = lixo;
-                lixo.arrastando = true;
-                break;
+            if (y >= 220 && y <= 260) {
+                tempoJogo = tempoSelecionado;
+                tempoMax = tempoSelecionado;
+                estado = EstadoJogo.JOGANDO; // 🔥 ESSENCIAL
             }
+
+            else if (y >= 280 && y <= 340) {
+                estado = EstadoJogo.DETALHES;
+            }
+
+            else if (y >= 400 && y <= 450) {
+                if (dificuldade.equals("FÁCIL"))
+                    dificuldade = "MÉDIO";
+                else if (dificuldade.equals("MÉDIO"))
+                    dificuldade = "DIFÍCIL";
+                else
+                    dificuldade = "FÁCIL";
+            } else if (y >= 340 && y <= 400) {
+                if (tempoSelecionado == 30)
+                    tempoSelecionado = 60;
+                else if (tempoSelecionado == 60)
+                    tempoSelecionado = 120;
+                else
+                    tempoSelecionado = 30;
+            }
+            repaint();
+            return;
         }
 
-        for (ItemBonus b : bonus) {
-            if (new Rectangle(b.x, b.y, 20, 20).contains(e.getPoint())) {
-                bonusSelecionado = b;
-                b.arrastando = true;
-                return;
+        // DETALHES → voltar
+        if (estado == EstadoJogo.DETALHES) {
+            estado = EstadoJogo.MENU;
+            return;
+        }
+
+        // FIM → reset
+        if (estado == EstadoJogo.FIM) {
+
+            Rectangle btnVoltar = new Rectangle(
+                    getWidth() / 2 - 250,
+                    getHeight() / 2 + 40,
+                    300,
+                    60);
+
+            if (btnVoltar.contains(e.getPoint())) {
+                estado = EstadoJogo.MENU;
+
+                pontos = 0;
+                vidas = 5;
+
+                lixos.clear();
+                passaros.clear();
+                passarosBonus.clear();
+                confetes.clear();
+            }
+
+            return;
+        }
+
+        // JOGO → pegar lixo
+        if (estado == EstadoJogo.JOGANDO) {
+
+            for (Lixo lixo : lixos) {
+                if (new Rectangle(lixo.x, lixo.y, 30, 30).contains(e.getPoint())) {
+                    lixoSelecionado = lixo;
+                    lixo.arrastando = true;
+                    break;
+                }
+            }
+
+            for (ItemBonus b : bonus) {
+                if (new Rectangle(b.x, b.y, 20, 20).contains(e.getPoint())) {
+                    bonusSelecionado = b;
+                    b.arrastando = true;
+                    return;
+                }
             }
         }
     }
@@ -373,6 +928,8 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
     }
 
     public void mouseMoved(MouseEvent e) {
+        mousePos = e.getPoint();
+        repaint();
     }
 
     public void mouseEntered(MouseEvent e) {

@@ -3,13 +3,14 @@ import java.awt.*;
 public class Lixo {
     String tipo;
     int x, y;
-    Color cor;
+    Image imagem;
     boolean arrastando = false;
+    boolean sendoPuxado = false;
 
-    Lixo(String tipo, int x, int y, Color cor) {
+    public Lixo(String tipo, int x, int y, Image imagem) {
         this.tipo = tipo;
         this.x = x;
         this.y = y;
-        this.cor = cor;
+        this.imagem = imagem;
     }
 }
