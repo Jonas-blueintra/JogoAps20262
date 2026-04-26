@@ -1,10 +1,8 @@
-import javax.swing.*;
-import javax.swing.text.html.HTMLDocument.Iterator;
-
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.List;
+import javax.swing.*;
 
 public class JogoReciclagem extends JPanel implements ActionListener, MouseListener, MouseMotionListener {
 
@@ -98,7 +96,7 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
         nuvens.add(new Nuvem(1000, 90, 1, imagemNuvem));
         nuvens.add(new Nuvem(1300, 20, 2, imagemNuvem));
         for (int i = 0; i < tipos.length; i++) {
-            lixeiras.add(new Lixeira(tipos[i], 0, imagensLixeira[i], 0, 0));
+            lixeiras.add(new Lixeira(tipos[i], 0, 0, 0, 0, imagensLixeira[i]));
         }
 
         new javax.swing.Timer(30, this).start();
@@ -263,15 +261,36 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
 
         Rectangle lixoRect = new Rectangle(lixo.x, lixo.y, 30, 30);
 
-        for (Lixeira lixeira : lixeiras) {
+        Rectangle lixeiraRect = new Rectangle(
+            lixeiras.x,
+            getHeight() - lixeiras.altura, // Dinâmico com base na altura
+            lixeiras.largura,
+            lixeiras.altura
+        );
 
-            int yLixeira = getHeight() - 180;
+            for (Lixeira lixeira : lixeiras) { // O nome aqui é 'lixeira'
+            // USANDO O MÉTODO NOVO: 
+            // Em vez de criar o Rectangle na mão com valores fixos, usamos o da lixeira
+            if (lixoRect.intersects(lixeira.getBounds())) { 
 
-            Rectangle lixeiraRect = new Rectangle(
-                    lixeira.x,
-                    yLixeira,
-                    190,
-                    190);
+                if (lixo.tipo.equals(lixeira.tipo)) {
+                    pontos++;
+                    mensagem = "Acertou!";
+                    lixeira.feedback = 1; // Ativa o feedback de acerto
+                    lixeira.tempoFeedback = 30;
+                } else {
+                    pontos--;
+                    vidas--;
+                    mensagem = "Lixeira errada!";
+                    lixeira.feedback = 2; // Ativa o feedback de erro
+                    lixeira.tempoFeedback = 30;
+                }
+                return true; 
+                }
+                return false;
+            }
+            
+
             // 🔥 TRATAR LIXO ESPECIAL (CESTA)
             if (lixo.tipo.equalsIgnoreCase("especial")) {
 
@@ -307,10 +326,10 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
             }
             if (lixoRect.intersects(lixeiraRect)) {
 
-                if (lixo.tipo.equals(lixeira.tipo)) {
+                if (lixo.tipo.equals(lixeiras.tipo)) {
                     pontos++;
                     mensagem = "Acertou!";
-                    lixeira.feedback = 1;
+                    lixeiras.feedback = 1;
                     lixeira.tempoFeedback = 30;
                 } else {
                     pontos--;
@@ -359,61 +378,11 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
 
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-
         int w = getWidth();
         int h = getHeight();
         g.drawImage(background, 0, 0, w, h, null);
         // 🔥 AVISO DO IMÃ (sempre por cima de tudo)
-        if (imaAtivo) {
-
-            Graphics2D g2d = (Graphics2D) g;
-
-            int tamanho = 40 + (int) (Math.sin(System.currentTimeMillis() * 0.01) * 3);
-
-            int x = getWidth() / 2 - tamanho / 2;
-            int y = 20;
-
-            String texto = "IMÃ ATIVO";
-
-            g2d.setFont(new Font("Arial", Font.BOLD, 16));
-            FontMetrics fm = g2d.getFontMetrics();
-
-            int larguraTexto = fm.stringWidth(texto);
-
-            int boxW = tamanho + 10 + larguraTexto + 20;
-            int boxH = tamanho + 20;
-
-            int boxX = getWidth() / 2 - boxW / 2;
-            int boxY = y - 10;
-
-            // fundo
-            g2d.setColor(new Color(0, 0, 0, 150));
-            g2d.fillRoundRect(boxX, boxY, boxW, boxH, 20, 20);
-
-            // borda
-            g2d.setColor(Color.CYAN);
-            g2d.drawRoundRect(boxX, boxY, boxW, boxH, 20, 20);
-
-            // imagem (com sombra leve)
-            int imgX = boxX + 10;
-            int imgY = y;
-
-            g2d.drawImage(imgIma, imgX + 2, imgY + 2, tamanho, tamanho, null);
-            g2d.drawImage(imgIma, imgX, imgY, tamanho, tamanho, null);
-
-            // texto alinhado verticalmente com a imagem
-
-            int textX = imgX + tamanho + 10;
-            int textY = imgY + (tamanho / 2) + (fm.getAscent() / 2) - 2;
-
-            // sombra texto
-            g2d.setColor(Color.BLACK);
-            g2d.drawString(texto, textX + 2, textY + 2);
-
-            // texto principal
-            g2d.setColor(Color.CYAN);
-            g2d.drawString(texto, textX, textY);
-        }
+        
         for (Nuvem n : nuvens) {
             n.desenhar(g);
         }
@@ -422,6 +391,7 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
         // for (Nuvem n : nuvens) {
         // n.desenhar(g);
         // }
+
         if (estado == EstadoJogo.MENU) {
             Graphics2D g2 = (Graphics2D) g;
 
@@ -564,6 +534,90 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
 
             return;
         }
+
+        if(estado == EstadoJogo.JOGANDO){
+             Graphics2D g2 = (Graphics2D) g;
+            // A. DESENHAR NUVENS [cite: 407]
+            for (Nuvem n : nuvens) {
+                n.desenhar(g);
+            }
+            // B. DIMENSIONAMENTO RESPONSIVO DAS LIXEIRAS
+            int margem = 30;
+            int espacamento = 15;
+            int quantidade = lixeiras.size();
+
+            if (quantidade > 0) {
+            // Calcula a largura proporcional para que todas caibam na largura da tela 
+            int larguraLixeira = (w - (2 * margem) - (espacamento * (quantidade - 1))) / quantidade;
+            int alturaLixeira = (int) (larguraLixeira * 1.2); // Mantém a proporção vertical
+            int yPos = h - alturaLixeira - 30; // 30px de margem do fundo
+
+                for (int i = 0; i < quantidade; i++) {
+                    Lixeira l = lixeiras.get(i);
+                    
+                    // Atualiza as propriedades dinâmicas antes de desenhar
+                    l.largura = larguraLixeira;
+                    l.altura = alturaLixeira;
+                    l.x = margem + i * (larguraLixeira + espacamento);
+                    l.y = yPos;
+
+                    // Chama o método de desenho da própria lixeira
+                    l.desenhar(g);
+                }
+            }
+
+            // C. DESENHAR PÁSSAROS E LIXO ESPECIAL [cite: 424, 425]
+            for (Passaro p : passaros) p.desenhar(g);
+            for (PassaroBonus pb : passarosBonus) pb.desenhar(g);
+
+            // D. DESENHAR LIXOS CAINDO/ARRASTANDO [cite: 430]
+            for (Lixo lixo : lixos) {
+                // Tamanho do lixo pode ser fixo ou levemente proporcional ao HUD
+                g.drawImage(lixo.imagem, lixo.x, lixo.y, 50, 50, null);
+            }
+
+            // E. DESENHAR CONFETES (Bônus) [cite: 427]
+            for (Confete c : confetes) {
+                c.desenhar(g);
+            }
+            // Fundo do HUD [cite: 300]
+            g2.setColor(new Color(0, 0, 0, 140));
+            g2.fillRoundRect(10, 10, hudW, hudH, 20, 20);
+
+            // Pontos e Vidas [cite: 301]
+            g2.setColor(Color.WHITE);
+            g2.setFont(new Font("Arial", Font.BOLD, 18));
+            g2.drawString("PONTOS: " + pontos, 30, 40);
+
+            // Desenhar corações para as vidas [cite: 388]
+            for (int i = 0; i < 5; i++) {
+                Image imgCoracao = (i < vidas) ? coracaoCheio : coracaoVazio;
+                g2.drawImage(imgCoracao, 30 + (i * 35), 55, 30, 30, null);
+            }
+
+            // G. BARRA DE TEMPO [cite: 338, 339]
+            int barraLargura = 180;
+            int barraAltura = 15;
+            int xBarra = 25;
+            int yBarra = 95;
+            double porcentagem = (double) tempoJogo / tempoSelecionado;
+            int larguraAtual = (int) (barraLargura * porcentagem);
+            g2.setColor(Color.DARK_GRAY);
+            g2.fillRoundRect(xBarra, yBarra, barraLargura, barraAltura, 10, 10);
+            g2.setColor(porcentagem > 0.3 ? Color.GREEN : Color.RED);
+            g2.fillRoundRect(xBarra, yBarra, larguraAtual, barraAltura, 10, 10);
+
+            // H. CAIXA DE MENSAGEM (FEEDBACK) [cite: 340-342]
+            if (!mensagem.isEmpty()) {
+                int msgW = 350;
+                int msgX = (w - msgW) / 2;
+                g2.setColor(new Color(0, 0, 0, 180));
+                g2.fillRoundRect(msgX, 20, msgW, 40, 15, 15);
+                g2.setColor(Color.CYAN);
+                g2.drawString(mensagem, msgX + 20, 47);
+            }
+        }
+
         if (estado == EstadoJogo.FIM) {
 
             Graphics2D g2 = (Graphics2D) g;
