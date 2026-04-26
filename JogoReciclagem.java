@@ -254,96 +254,88 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
 
     boolean verificarColisao(Lixo lixo) {
 
-        // 🔥 BLOQUEIO TOTAL
+        // Não colide enquanto estiver sendo puxado pelo ímã
         if (lixo.sendoPuxado) {
             return false;
         }
 
         Rectangle lixoRect = new Rectangle(lixo.x, lixo.y, 30, 30);
 
-        Rectangle lixeiraRect = new Rectangle(
-            lixeiras.x,
-            getHeight() - lixeiras.altura, // Dinâmico com base na altura
-            lixeiras.largura,
-            lixeiras.altura
-        );
+        // ===============================
+        // LIXO ESPECIAL (CESTA BONUS)
+        // ===============================
+        if (lixo.tipo.equalsIgnoreCase("especial")) {
 
-            for (Lixeira lixeira : lixeiras) { // O nome aqui é 'lixeira'
-            // USANDO O MÉTODO NOVO: 
-            // Em vez de criar o Rectangle na mão com valores fixos, usamos o da lixeira
-            if (lixoRect.intersects(lixeira.getBounds())) { 
+            Rectangle cesta = new Rectangle(
+                    getWidth() / 2 - 100,
+                    getHeight() - 100,
+                    200,
+                    50);
 
-                if (lixo.tipo.equals(lixeira.tipo)) {
+            if (lixoRect.intersects(cesta)) {
+
+                int cestaX = getWidth() / 2;
+                int cestaY = getHeight() - 100;
+
+                for (int i = 0; i < 300; i++) {
+                    confetes.add(new Confete(cestaX, cestaY));
+                }
+
+                pontos += 2;
+                vidas++;
+
+                imaAtivo = true;
+                tempoIma = 300;
+                usosIma = 5;
+
+                mensagem = "BONUS +2 pontos +1 vida!";
+                tempoMensagem = 60;
+
+                feedbackCesta = 1;
+                tempoFeedbackCesta = 30;
+
+                if (vidas > 5) {
+                    hudW += 30;
+                }
+
+                return true;
+            }
+
+            return false; // lixo especial só testa cesta
+        }
+
+        // ===============================
+        // TESTAR NAS LIXEIRAS
+        // ===============================
+        for (Lixeira lixeira : lixeiras) {
+
+            if (lixoRect.intersects(lixeira.getBounds())) {
+
+                if (lixo.tipo.equalsIgnoreCase(lixeira.tipo)) {
+
                     pontos++;
                     mensagem = "Acertou!";
-                    lixeira.feedback = 1; // Ativa o feedback de acerto
+
+                    lixeira.feedback = 1;
                     lixeira.tempoFeedback = 30;
+
                 } else {
+
                     pontos--;
                     vidas--;
-                    mensagem = "Lixeira errada!";
-                    lixeira.feedback = 2; // Ativa o feedback de erro
-                    lixeira.tempoFeedback = 30;
-                }
-                return true; 
-                }
-                return false;
-            }
-            
 
-            // 🔥 TRATAR LIXO ESPECIAL (CESTA)
-            if (lixo.tipo.equalsIgnoreCase("especial")) {
-
-                Rectangle cesta = new Rectangle(
-                        getWidth() / 2 - 100,
-                        getHeight() - 100,
-                        200,
-                        50);
-
-                if (lixoRect.intersects(cesta)) {
-                    int cestaX = getWidth() / 2;
-                    int cestaY = getHeight() - 100;
-
-                    for (int i = 0; i < 300; i++) {
-                        confetes.add(new Confete(cestaX, cestaY));
-                    }
-                    pontos += 2;
-                    vidas++;
-                    imaAtivo = true;
-                    tempoIma = 300; // dura ~10 segundos
-                    usosIma = 5; // vai puxar 5 lixos
-                    mensagem = "BONUS +2 pontos +1 vida!";
-                    tempoMensagem = 60;
-
-                    feedbackCesta = 1;
-                    tempoFeedbackCesta = 30;
-                    if (vidas > 5)
-                        hudW += 30;
-                    return true;
-                }
-
-                return false; // não testa nas lixeiras
-            }
-            if (lixoRect.intersects(lixeiraRect)) {
-
-                if (lixo.tipo.equals(lixeiras.tipo)) {
-                    pontos++;
-                    mensagem = "Acertou!";
-                    lixeiras.feedback = 1;
-                    lixeira.tempoFeedback = 30;
-                } else {
-                    pontos--;
-                    vidas--;
                     mensagem = "Lixeira errada! -1 vida";
-                    lixeira.feedback = -1;
+
+                    lixeira.feedback = 2;
                     lixeira.tempoFeedback = 30;
 
-                    if (vidas <= 0)
+                    if (vidas <= 0) {
                         estado = EstadoJogo.FIM;
+                    }
                 }
 
                 tempoMensagem = 60;
-                return true; // 🔥 só avisa que colidiu
+                return true;
             }
         }
 
@@ -382,7 +374,7 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
         int h = getHeight();
         g.drawImage(background, 0, 0, w, h, null);
         // 🔥 AVISO DO IMÃ (sempre por cima de tudo)
-        
+
         for (Nuvem n : nuvens) {
             n.desenhar(g);
         }
@@ -535,8 +527,8 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
             return;
         }
 
-        if(estado == EstadoJogo.JOGANDO){
-             Graphics2D g2 = (Graphics2D) g;
+        if (estado == EstadoJogo.JOGANDO) {
+            Graphics2D g2 = (Graphics2D) g;
             // A. DESENHAR NUVENS [cite: 407]
             for (Nuvem n : nuvens) {
                 n.desenhar(g);
@@ -547,14 +539,14 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
             int quantidade = lixeiras.size();
 
             if (quantidade > 0) {
-            // Calcula a largura proporcional para que todas caibam na largura da tela 
-            int larguraLixeira = (w - (2 * margem) - (espacamento * (quantidade - 1))) / quantidade;
-            int alturaLixeira = (int) (larguraLixeira * 1.2); // Mantém a proporção vertical
-            int yPos = h - alturaLixeira - 30; // 30px de margem do fundo
+                // Calcula a largura proporcional para que todas caibam na largura da tela
+                int larguraLixeira = (w - (2 * margem) - (espacamento * (quantidade - 1))) / quantidade;
+                int alturaLixeira = (int) (larguraLixeira * 1.2); // Mantém a proporção vertical
+                int yPos = h - alturaLixeira - 30; // 30px de margem do fundo
 
                 for (int i = 0; i < quantidade; i++) {
                     Lixeira l = lixeiras.get(i);
-                    
+
                     // Atualiza as propriedades dinâmicas antes de desenhar
                     l.largura = larguraLixeira;
                     l.altura = alturaLixeira;
@@ -567,8 +559,10 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
             }
 
             // C. DESENHAR PÁSSAROS E LIXO ESPECIAL [cite: 424, 425]
-            for (Passaro p : passaros) p.desenhar(g);
-            for (PassaroBonus pb : passarosBonus) pb.desenhar(g);
+            for (Passaro p : passaros)
+                p.desenhar(g);
+            for (PassaroBonus pb : passarosBonus)
+                pb.desenhar(g);
 
             // D. DESENHAR LIXOS CAINDO/ARRASTANDO [cite: 430]
             for (Lixo lixo : lixos) {
@@ -715,29 +709,6 @@ public class JogoReciclagem extends JPanel implements ActionListener, MouseListe
         int larguraTotal = totalLixeiras * larguraLixeira + (totalLixeiras - 1) * espacamento;
         int startX = (w - larguraTotal) / 2;
 
-        for (int i = 0; i < lixeiras.size(); i++) {
-            Lixeira lixeira = lixeiras.get(i);
-
-            int x = startX + i * (larguraLixeira + espacamento);
-            int y = h - 180;
-
-            lixeira.x = x;
-            g.setFont(new Font("Arial", Font.BOLD, 20));
-
-            g.drawImage(lixeira.imagem, x, y, larguraLixeira, larguraLixeira, null);
-
-            g.setColor(Color.WHITE);
-            g.drawString(lixeira.tipo, x + 20, y + 20);
-
-            // feedback
-            if (lixeira.feedback != 0) {
-                if (lixeira.feedback == 1) {
-                    g.drawImage(check, x + 50, y + 50, 80, 80, null);
-                } else {
-                    g.drawImage(ximg, x + 50, y + 50, 80, 80, null);
-                }
-            }
-        }
         int cestaX = w / 2 - 100;
         int cestaY = h - 100;
 
